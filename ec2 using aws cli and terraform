@@ -1,0 +1,153 @@
+***********************Before creating anything on [pre-requisite of] Terraform****************************************************************** 
+
+Step1:
+IAM > user> create user > give s3 full access, admin access and IAM user change password access > store access key and secret access key > 
+
+Step2:
+Go to vs code make .tf file 
+
+Step3:
+go to dashboard > run aws configure > enter keys > check with aws s3 cli 
+
+Step4:
+go to dashboard > vim main.tf 
+
+Step5:
+go to docu:: 
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance
+********************************CREATING EC2 INSTANCE USING TERRAFORM ******************************************************
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_instance" "web" {
+  ami           = "ami-0f5ee92e2d63afc18"
+  instance_type = "t3.micro"
+  #count = 7
+  tags = {
+    Name = "HelloWorld"
+  }
+} 
+--------------------------------------------------------------------------------------------------------------------------------------
+NOTE:: when you make sensitive where do you see it> in state file
+sensitive attribute is use to store sensitive things.
+_______________________________________________________________________________________________________________________________________________
+
+THERE ARE DIFF WAYS OF CREATING VARIABLES IN TERRAFORM:
+
+a) within config file using variable block
+b) via CLI prompt during Terraform execution/ initialization
+c) using -var option
+
+
+***********************************CREATING INSTANCE BUT USING VARIABLE BLOCK************************************************************
+
+resource "aws_instance" "web" {
+  ami           = var.os
+  instance_type = "t3.micro"
+  count = 7
+  tags = {
+    Name = "HelloWorld"
+  }
+} 
+
+variable "os" {
+  type = string
+  default = "ami-0f5ee92e2d63afc18"
+  description = "This is my first ec2"
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+HERE; os is the variable name
+___________________________________________________________________________________________________________________________________________________________________
+
+*******************************CREATING VARIABLES FOR NAME, SIZE OF THE INSTANCE**********************************************************************
+
+resource "aws_instance" "web" {
+  ami           = var.os
+  instance_type = var.size
+  #count = 7
+  tags = {
+    Name = var.Name
+  }
+} 
+
+variable "os" {
+  type = string
+  default = "ami-0f5ee92e2d63afc18"
+  description = "This is my first ec2"
+}
+
+variable "size" {
+    default = "t2.micro"
+  }
+
+variable "Name" {
+  default = "test"
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+*********************************VARIABLE USING CLI prompt during Terraform execution/ initialization*****************************************************
+
+**********************************CREATING S3 BUCKET***********************************************************************************
+doc:: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
+
+******************************CREATE A S3 BUCKET************************************************************************************************************** 
+created variable but doesnt define value in it eg 
+
+create 2 terraform files i.e main.tf and variable.tf
+
+step1:
+inside main.tf write
+
+
+resource "aws_s3_bucket" "test" {
+  bucket = var.aws_s3_bucket
+}
+
+step2:
+inside variable.tf write variable without giving value in it
+
+variable "aws_s3_bucket" {
+  
+}
+
+step3:
+go to main.tf save everthing
+run terraform apply
+
+It will ask you the b=name of the bucket while execution. i.e run Terraform apply and it will ask a bucket name.
+REMEMBER bucket name should be globally unique. 
+____________________________________________________________________________________________________________________________________________________
+
+*******************CREATING S3 BUCKET USING VARIABLE -var OPTION************************************************************************************
+
+2 FILES--> main.tf and variable.tf
+step1:
+inside main.tf write
+
+
+resource "aws_s3_bucket" "test" {
+  bucket = var.aws_s3_bucket
+}
+
+step2:
+inside variable.tf write variable without giving value in it
+
+variable "aws_s3_bucket" {
+  
+}
+
+step3:
+go to main.tf save everthing
+run terraform apply -var="aws_s3_bucket=diabaati"
+##diabaati is a bucket name###
+
+__________________________________________________________________________________________________________________________________________________________
+
+
+
+
+
