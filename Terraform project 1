@@ -1,0 +1,199 @@
+**********************************************************************STATIC WEBSITE HOSTING USING S3 IN TERRAFORM*************************************************************************************
+
+PRE-REQUISITE:: AWS Account, Terraform install
+
+STEPS::
+
+1. Create an s3 Bucket to store your website files. Bucket name should be globally unique.
+ 
+2. Configure Bucket for Static website Hosting: 
+		        --> S3 > bucket properties > enable static website hosting and default index doc (index.html)  and optional error doc (error.html)
+ 
+3. Upload Website Files: Upload your static website files (HTML, CSS, JS, Images etc.) to the s3 bucket.
+	            		--> make sure to set appropriate permissions (public-read) for the object to make them publicly accessible.
+
+4. Enable Public Access: Allow public access to the bucket
+                  --> bucket permissions > enable public access
+5. Configure DNS[optional]: if you want to use custom domain for your website eg. www.me.com 
+			                      you can swt up dns record using Route53 or any other DNS provider
+
+6. Testing the website: Once the setup is done, you can test your static website by accessing it through s3 bucket website URl.
+
+_________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Make 3 .tf files 
+project.tf and variable.tf and provider.tf
+Inside Provider.tf 
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.17.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Insider variable.tf 
+
+variable "aws_s3_bucket" {
+  default = "diabaati"
+}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Insider project.tf 
+---------------------------------------------------------------------------------------------------------------------
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket
+resource "aws_s3_bucket" "mirror" {
+  bucket = var.aws_s3_bucket
+}
+Here:: mirror is the bucket name for terraform. Inside variable we define s3 bucket name 
+***********************************To change bucket ownership*************************************************8
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_ownership_controls
+
+resource "aws_s3_bucket_ownership_controls" "example" {
+  bucket = aws_s3_bucket.mirror.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+Everything inside the bucket is owned by me i.e owner
+i.e only I can make changes into the bucket.
+--------------------------------------------------------------------------------------------------------------------
+*************************************To make bucket public ************************************************************
+
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block
+
+resource "aws_s3_bucket_public_access_block" "example" {
+  bucket = aws_s3_bucket.mirror.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+----------------------------------------------------------------------------------------------------------------------------
+
+************************************Add ACL to make sure the bucket is ready and public****************************************
+
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_acl
+inside that check public read
+copy the public read code
+
+resource "aws_s3_bucket_acl" "example" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.example,
+    aws_s3_bucket_public_access_block.example,
+  ]
+
+  bucket = aws_s3_bucket.mirror.id
+  acl    = "public-read"
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+************************************To make static website hosting enable*************************************************************
+
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_website_configuration
+
+If bucket is empty then cannot add index.html and error html for webiste hosting in s3 
+
+Crete 2 files i.e index.html and error html 
+when someone access your website they will see index.html and if they select something wrong or another path they will be able to see error.html
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+with the help of chatgpt will create index.html file content
+
+something like please create index.html for minal's portfolio website and mention projects add css to show animations
+copy the code and paste it into index.html 
+
+for error.html
+ask chatgpt that please create error.html too
+copy and paste it inside error.html
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+****************************Adding Object(image) to the s3 bucket********************************************************************
+copy the image and save it inside terrafrom folder where your project.tf filr is present
+go to doc 
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object
+add resource  
+
+resource "aws_s3_object" "object" {
+  bucket = aws_s3_bucket.mirror.id
+  key    = "index.html"
+  source = "index.html"
+  acl = "public-read"
+  content_type = "text/html"
+}
+
+copy the same thing for error.html
+
+resource "aws_s3_object" "error" {
+  bucket = aws_s3_bucket.mirror.id
+  key    = "error.html"
+  source = "error.html"
+  acl = "public-read"
+  content_type = "text/html"
+} 
+
+also add the image. in my case it is wot.png 
+
+resource "aws_s3_object" "png" {
+  bucket = aws_s3_bucket.mirror.id
+  key    = "wot.png"
+  source = "wot.pmg"
+  acl = "public-read"
+}
+
+run terraform apply and these 3 objects shouls be there. i.e index.html, error.html and wot.png 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+***************************************To configure website to Terraform*****************************************************************************
+
+https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_website_configuration
+
+resource "aws_s3_bucket_website_configuration" "website" {
+  bucket = aws_s3_bucket.mirror.id 
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+  depends_on = [ aws_s3_bucket_acl.example ]
+}
+
+run terraform apply
+
+go to bucket prop> see static website hosting link > click on it> you will see the portfolio 
+
+To Add image into that portfolio ask chatgpt as
+---> please add an image in between which has uploaded as wot.png in s3 bucket and add colors and animations to this.
+--> copy and paste it in index.html
+--> ctrl+F serach imag 
+--> copy object url--> got to bucket > object > wot.png > copy object url > paste it in index.html
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+******************************Create output.tf********************************************************************************
+It will show the output on the terminal only
+ output "websiteendpoint" {
+   value = aws_s3_bucket.mirror.website_endpoint
+ }
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Run this complete terraform file at a time.
+
+
+
+
+
